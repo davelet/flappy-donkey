@@ -1,5 +1,5 @@
 use std::cmp::max;
-use bracket_lib::color::{BLACK, NAVY, RED, YELLOW};
+use bracket_lib::color::{BLACK, GRAY, NAVY, RED, YELLOW};
 use bracket_lib::prelude::{BError, BTerm, BTermBuilder, main_loop, to_cp437, VirtualKeyCode};
 use bracket_lib::terminal::GameState;
 use crate::GameMode::{End, Menu, Playing};
@@ -48,7 +48,7 @@ impl State {
         }
     }
     fn play(&mut self, ctx: &mut BTerm) {
-        ctx.cls_bg(NAVY);
+        ctx.cls_bg(GRAY);
         self.frame_time += ctx.frame_time_ms;
         if self.frame_time > FRAME_DURATION {
             self.frame_time = 0.0;
@@ -59,14 +59,22 @@ impl State {
         }
         self.player.render(ctx);
         ctx.print(0, 0, "Press SPACE to flap");
-        if self.player.y > SCREEN_HEIGHT {
+        ctx.print(0, 1, format!("Score: {}", self.score));
+        self.obstacle.render(ctx, self.player.x);
+        if self.player.x > self.obstacle.x {
+            self.score += 1;
+            self.obstacle = Obstacle::new(self.player.x + SCREEN_WIDTH, self.score)
+        }
+        if self.player.y > SCREEN_HEIGHT || self.obstacle.hit_obstacle(&self.player){
             self.mode = End;
         }
     }
     fn restart(&mut self) {
         self.mode = Playing;
         self.frame_time = 0.0;
-        self.player = Player::new(5, 25)
+        self.player = Player::new(5, 25);
+        self.score = 0;
+        self.obstacle = Obstacle::new(SCREEN_WIDTH, 0)
     }
 
     fn main_menu(&mut self, ctx: &mut BTerm) {
@@ -87,6 +95,7 @@ impl State {
     fn dead(&mut self, ctx: &mut BTerm) {
         ctx.cls();
         ctx.print_centered(5, "You are dead");
+        ctx.print_centered(6, format!("You scored {}", self.score));
         ctx.print_centered(8, "(P) Play Again");
         ctx.print_centered(9, "(Q) Quit Game");
 
